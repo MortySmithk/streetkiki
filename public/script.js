@@ -290,7 +290,7 @@ async function renderDetails(data) {
             const button = e.currentTarget;
             const itemData = { id: data.id, title: data.title || data.name, poster_path: data.poster_path, media_type: type };
             if (isItemInWatchlist(data.id)) {
-                await removeFromWatchlist(data.id);
+                await removeFromWatchlist(itemData.id);
                 button.innerHTML = `<i class="fas fa-plus"></i> Ver Mais Tarde`;
             } else {
                 await addToWatchlist(itemData);

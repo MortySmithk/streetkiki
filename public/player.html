@@ -15,6 +15,7 @@
         }
         main {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -30,6 +31,20 @@
         }
         .error-text { 
             font-size: 1.5rem; 
+        }
+        .server-btn {
+            background-color: #374151;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .server-btn:hover {
+            background-color: #4b5563;
+        }
+        .server-btn.active {
+            background-color: #ef4444;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/disable-devtool@latest"></script>
@@ -71,6 +86,10 @@
 
     <main>
         <div id="error-text" class="error-text" style="display:none;">Erro: Conteúdo não encontrado.</div>
+        <div id="server-selector" class="flex gap-4 mb-4" style="display:none;">
+            <button id="server1-btn" class="server-btn active" data-server="superflix">Superflix (Recomendado)</button>
+            <button id="server2-btn" class="server-btn" data-server="cineveo">CineVEO</button>
+        </div>
         <iframe id="player-iframe" allowfullscreen></iframe>
     </main>
 
@@ -87,6 +106,7 @@
         window.onload = function() {
             const errorText = document.getElementById('error-text');
             const playerIframe = document.getElementById('player-iframe');
+            const serverSelector = document.getElementById('server-selector');
             
             const params = new URLSearchParams(window.location.search);
             const type = params.get('type');
@@ -94,24 +114,51 @@
             const season = params.get('s');
             const episode = params.get('e');
 
-            let streamUrl = '';
-
-            // --- ALTERAÇÃO AQUI ---
-            if (type === 'movie' && id) {
-                // Nova URL para filmes
-                streamUrl = `https://embedapi.vercel.app/stream/?id=${id}`;
-            } else if (type === 'tv' && id && season && episode) {
-                // Nova URL para séries
-                streamUrl = `https://embedapi.vercel.app/play/?id=${id}/${season}/${episode}`;
-            }
-            // --- FIM DA ALTERAÇÃO ---
-
-            if (streamUrl) {
-                playerIframe.src = streamUrl;
-            } else {
+            if (!id || (type === 'tv' && (!season || !episode))) {
                 playerIframe.style.display = 'none';
+                serverSelector.style.display = 'none';
                 errorText.style.display = 'block';
+                return;
             }
+
+            serverSelector.style.display = 'flex';
+
+            const servers = {
+                superflix: {
+                    getUrl: (type, id, s, e) => {
+                        if (type === 'movie') return `https://superflixapi.shop/filme/${id}`;
+                        if (type === 'tv') return `https://superflixapi.shop/serie/${id}/${s}/${e}`;
+                        return null;
+                    }
+                },
+                cineveo: {
+                    getUrl: (type, id, s, e) => {
+                        if (type === 'movie') return `https://cineveo.lat/player3/media/movie/${id}`;
+                        if (type === 'tv') return `https://cineveo.lat/player3/media/series/${id}/${s}/${e}`;
+                        return null;
+                    }
+                }
+            };
+            
+            function loadPlayer(serverName) {
+                const url = servers[serverName].getUrl(type, id, season, episode);
+                if (url) {
+                    playerIframe.src = url;
+                    document.querySelectorAll('.server-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    document.querySelector(`.server-btn[data-server="${serverName}"]`).classList.add('active');
+                } else {
+                    playerIframe.style.display = 'none';
+                    errorText.style.display = 'block';
+                }
+            }
+
+            document.getElementById('server1-btn').addEventListener('click', () => loadPlayer('superflix'));
+            document.getElementById('server2-btn').addEventListener('click', () => loadPlayer('cineveo'));
+
+            // Load Superflix by default
+            loadPlayer('superflix');
         };
     </script>
 </body>
