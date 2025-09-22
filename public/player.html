@@ -32,20 +32,6 @@
         .error-text { 
             font-size: 1.5rem; 
         }
-        .server-btn {
-            background-color: #374151;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .server-btn:hover {
-            background-color: #4b5563;
-        }
-        .server-btn.active {
-            background-color: #ef4444;
-        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/disable-devtool@latest"></script>
     <script>
@@ -85,12 +71,9 @@
     </header>
 
     <main>
+        <div id="loading-text" class="text-xl text-gray-400">Carregando Player Principal...</div>
         <div id="error-text" class="error-text" style="display:none;">Erro: Conteúdo não encontrado.</div>
-        <div id="server-selector" class="flex gap-4 mb-4" style="display:none;">
-            <button id="server1-btn" class="server-btn active" data-server="superflix">Superflix (Recomendado)</button>
-            <button id="server2-btn" class="server-btn" data-server="cineveo">CineVEO</button>
-        </div>
-        <iframe id="player-iframe" allowfullscreen></iframe>
+        <iframe id="player-iframe" allowfullscreen style="display:none;"></iframe>
     </main>
 
     <script>
@@ -98,15 +81,14 @@
             e.preventDefault();
             const query = document.getElementById('player-search-input').value.trim();
             if (query) {
-                // Redireciona para a página inicial com o parâmetro de busca
                 window.location.href = `index.html?search=${encodeURIComponent(query)}`;
             }
         });
 
         window.onload = function() {
+            const loadingText = document.getElementById('loading-text');
             const errorText = document.getElementById('error-text');
             const playerIframe = document.getElementById('player-iframe');
-            const serverSelector = document.getElementById('server-selector');
             
             const params = new URLSearchParams(window.location.search);
             const type = params.get('type');
@@ -115,50 +97,30 @@
             const episode = params.get('e');
 
             if (!id || (type === 'tv' && (!season || !episode))) {
+                loadingText.style.display = 'none';
                 playerIframe.style.display = 'none';
-                serverSelector.style.display = 'none';
                 errorText.style.display = 'block';
                 return;
             }
 
-            serverSelector.style.display = 'flex';
-
-            const servers = {
-                superflix: {
-                    getUrl: (type, id, s, e) => {
-                        if (type === 'movie') return `https://superflixapi.shop/filme/${id}`;
-                        if (type === 'tv') return `https://superflixapi.shop/serie/${id}/${s}/${e}`;
-                        return null;
-                    }
-                },
-                cineveo: {
-                    getUrl: (type, id, s, e) => {
-                        if (type === 'movie') return `https://cineveo.lat/player3/media/movie/${id}`;
-                        if (type === 'tv') return `https://cineveo.lat/player3/media/series/${id}/${s}/${e}`;
-                        return null;
-                    }
-                }
-            };
-            
-            function loadPlayer(serverName) {
-                const url = servers[serverName].getUrl(type, id, season, episode);
-                if (url) {
-                    playerIframe.src = url;
-                    document.querySelectorAll('.server-btn').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    document.querySelector(`.server-btn[data-server="${serverName}"]`).classList.add('active');
-                } else {
-                    playerIframe.style.display = 'none';
-                    errorText.style.display = 'block';
-                }
+            // Função para gerar a URL do PrimeVicio
+            function getPrimeVicioUrl(type, id, s, e) {
+                if (type === 'movie') return `https://primevicio.vercel.app/embed/movie/${id}`;
+                if (type === 'tv') return `https://primevicio.vercel.app/embed/tv/${id}/${s}/${e}`;
+                return null;
             }
+            
+            const url = getPrimeVicioUrl(type, id, season, episode);
 
-            document.getElementById('server1-btn').addEventListener('click', () => loadPlayer('superflix'));
-            document.getElementById('server2-btn').addEventListener('click', () => loadPlayer('cineveo'));
-
-            // Load Superflix by default
-            loadPlayer('superflix');
+            if (url) {
+                playerIframe.src = url;
+                loadingText.style.display = 'none';
+                playerIframe.style.display = 'block';
+            } else {
+                loadingText.style.display = 'none';
+                playerIframe.style.display = 'none';
+                errorText.style.display = 'block';
+            }
         };
     </script>
 </body>
