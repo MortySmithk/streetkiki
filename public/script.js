@@ -80,14 +80,14 @@ const pageTemplates = {
         <section id="popular-movies" class="mb-12">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold border-l-4 border-red-500 pl-3">Filmes Populares</h2>
-                <a href="#" class="text-red-400 hover:text-red-300 font-semibold nav-link" data-target="movies-page">Ver Mais</a>
+                <a href="#movies-page" class="text-red-400 hover:text-red-300 font-semibold nav-link" data-target="movies-page">Ver Mais</a>
             </div>
             <div id="popular-movies-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
         </section>
         <section id="popular-series" class="mb-12">
              <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold border-l-4 border-red-500 pl-3">Séries Populares</h2>
-                <a href="#" class="text-red-400 hover:text-red-300 font-semibold nav-link" data-target="series-page">Ver Mais</a>
+                <a href="#series-page" class="text-red-400 hover:text-red-300 font-semibold nav-link" data-target="series-page">Ver Mais</a>
             </div>
             <div id="popular-series-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
         </section>`,
@@ -193,6 +193,7 @@ onAuthStateChanged(auth, async (user) => {
         await signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
     }
     updateUserMenu(user);
+    handleRouting(); // Handle routing after user state is known
 });
 
 // --- TMDB API FETCHING ---
@@ -220,12 +221,12 @@ function createContentCard(item) {
             <div class="watchlist-icon ${isFavorited ? 'favorited' : ''}" data-id="${item.id}" data-type="${type}" data-title="${item.title || item.name}" data-poster="${item.poster_path}">
                 <i class="fas fa-heart"></i>
             </div>
-            <div class="cursor-pointer" data-id="${item.id}" data-type="${type}">
+            <a href="#details/${type}/${item.id}">
                 <img src="${posterPath}" alt="${item.title || item.name}" class="w-full h-full object-cover transition-all duration-300">
                 <div class="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 play-icon">
                     <i class="fas fa-play-circle text-white text-6xl"></i>
                 </div>
-            </div>
+            </a>
         </div>
     `;
 }
@@ -252,6 +253,15 @@ function renderWatchlistGrid() {
 
 async function renderDetails(data) {
     const type = data.title ? 'movie' : 'tv';
+    const title = data.title || data.name;
+
+    // AQUI MUDAMOS O TÍTULO DA PÁGINA
+    if(type === 'movie'){
+        document.title = `StreetFlix - Assistir ${title} Online Gratis Dublado, Filmes Online`;
+    } else {
+        document.title = `StreetFlix - Assistir ${title} Online Grátis Dublado, Séries Online`;
+    }
+
     const backdropPath = data.backdrop_path ? `${BACKDROP_BASE_URL}${data.backdrop_path}` : '';
     const posterPath = data.poster_path ? `${IMG_BASE_URL}${data.poster_path}` : 'https://placehold.co/500x750/141414/ef4444?text=StreetFlix';
     const year = (data.release_date || data.first_air_date || '').substring(0, 4);
@@ -452,6 +462,8 @@ function renderPagination(currentPage, totalPages, pageType) {
 
 // --- PAGE LOAD FUNCTIONS ---
 async function loadPageContent(pageId, pageNumber = 1) {
+    // Reset page title
+    document.title = 'StreetFlix - Assistir Filmes e Séries Online Grátis Em HD';
     showPage(pageId);
     
     try {
@@ -493,9 +505,36 @@ async function loadPageContent(pageId, pageNumber = 1) {
     }
 }
 
+// --- ROUTING ---
+async function handleRouting() {
+    const hash = window.location.hash.substring(1);
+    const params = hash.split('/');
+    const page = params[0] || 'home-page';
+
+    if (page === 'details') {
+        const type = params[1];
+        const id = params[2];
+        if (type && id) {
+            showPage('details-page');
+            pageContent.innerHTML = loadingTemplate;
+            const data = await fetchFromTMDB(`${type}/${id}`);
+            if (data) {
+                await renderDetails(data);
+            } else {
+                pageContent.innerHTML = `<p class="text-gray-400 text-center mt-10">Não foi possível carregar os detalhes.</p>`;
+            }
+        } else {
+            loadPageContent('home-page');
+        }
+    } else {
+        loadPageContent(page);
+    }
+}
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-    loadPageContent('home-page');
+    
+    window.addEventListener('hashchange', handleRouting);
 
     closeAuthModalBtn.addEventListener('click', hideAuthModal);
     authModal.addEventListener('click', (e) => { if (e.target === authModal) hideAuthModal(); });
@@ -533,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navLink) {
             triggerAd();
             e.preventDefault();
-            loadPageContent(navLink.dataset.target);
+            window.location.hash = navLink.dataset.target;
         }
     });
 
@@ -557,19 +596,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     mainContent.addEventListener('click', async (e) => {
-        const detailsLink = e.target.closest('.card > div[data-id]');
         const watchlistIcon = e.target.closest('.watchlist-icon');
-        const navLink = e.target.closest('.nav-link');
-
-        if (navLink) { // Captura cliques em "Ver Mais"
-            triggerAd();
-            e.preventDefault();
-            loadPageContent(navLink.dataset.target);
-            return;
-        }
 
         if (watchlistIcon) {
             triggerAd();
+            e.preventDefault();
             e.stopPropagation();
             if (!auth.currentUser || auth.currentUser.isAnonymous) {
                 showAuthModal();
@@ -590,18 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 await addToWatchlist(itemData);
                 watchlistIcon.classList.add('favorited');
-            }
-
-        } else if (detailsLink) {
-            triggerAd();
-            const { id, type } = detailsLink.dataset;
-            showPage('details-page');
-            pageContent.innerHTML = loadingTemplate;
-            const data = await fetchFromTMDB(`${type}/${id}`);
-            if (data) {
-                await renderDetails(data);
-            } else {
-                pageContent.innerHTML = `<p class="text-gray-400 text-center mt-10">Não foi possível carregar os detalhes.</p>`;
             }
         }
     });
