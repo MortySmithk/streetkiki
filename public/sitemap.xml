@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>https://streetflixk.firebaseapp.com/sitemap-movies.xml</loc>
+    <loc>https://streetflix.pro/sitemap-movies.xml</loc>
     <lastmod>2025-10-07</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://streetflixk.firebaseapp.com/sitemap-series.xml</loc>
+    <loc>https://streetflix.pro/sitemap-series.xml</loc>
     <lastmod>2025-10-07</lastmod>
   </sitemap>
 </sitemapindex>
